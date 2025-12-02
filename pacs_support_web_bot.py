@@ -1,252 +1,170 @@
-# PACS Helper Bot — Enhanced UI Version
+# =============================================
+# PACS SUPPORT BOT v10 – SUPER FRIENDLY EDITION
+# =============================================
 
-Below is an upgraded version of the PACS Helper Bot with a significantly improved user interface. It introduces:
-
-- Modern dark mode with improved styling
-- Card‑based layout similar to professional dashboards
-- Smooth animations & transitions
-- Floating chat box
-- Language dropdown redesigned
-- Animated section headers
-- Better spacing, shadows, borders, and responsive layout
-- Persistent theme memory
-
----
-
-```python
 import streamlit as st
-import time
-import json
-from datetime import datetime
-from pathlib import Path
 
-##############################################
-# CONFIGURATION
-##############################################
 st.set_page_config(
     page_title="PACS Helper Bot",
-    page_icon="🖥️",
-    layout="wide"
+    page_icon="Lungs",                    # Friendliest radiology icon
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-LOG_FILE = Path("./logs/cases.log")
-LOG_FILE.parent.mkdir(exist_ok=True)
+# =================== WARM & FRIENDLY DESIGN ===================
+st.markdown("""
+<style>
+    .main {background: linear-gradient(to bottom, #f0f7ff, #e1f0ff); min-height: 100vh;}
+    .block-container {background: white; border-radius: 25px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);}
+    .big-title {font-size: 3.8rem !important; font-weight: 900; text-align: center; 
+                background: linear-gradient(to right, #4facfe, #00f2fe); 
+                -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+    .friend-btn button {height: 80px !important; font-size: 1.3rem !important; 
+                        background: linear-gradient(45deg, #667eea, #764ba2) !important; 
+                        border-radius: 20px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;}
+    .step-box {background: #f8f9ff; padding: 1.5rem; border-radius: 15px; border-left: 6px solid #4facfe; margin: 1rem 0;}
+    .stChatMessage {border-radius: 18px; padding: 1rem;}
+    [data-testid="stChatMessageUser"] {background: #e3f2fd;}
+    [data-testid="stChatMessageAssistant"] {background: #f3e5f5;}
+</style>
+""", unsafe_allow_html=True)
 
-SUPPORTED_LANGS = {
-    "en": "English",
-    "fr": "Français",
-    "ar": "العربية"
+# =================== HEADER ===================
+st.markdown('<h1 class="big-title">PACS Helper Bot</h1>', unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center; color:#555;'>Your friendly 24/7 PACS assistant<br>English • عربي • Français</h3>", unsafe_allow_html=True)
+st.markdown("###### 😊 Just tell me what’s wrong – I’ll fix it step by step")
+
+# =================== QUICK FIXES DATABASE ===================
+QUICK_FIXES = {
+    "login|password|locked|تسجيل|mot de passe": "Login problem",
+    "image|slow|blank|not load|صور|lent": "Images not loading",
+    "study|missing|not found|دراسة|examen": "Study not showing",
+    "dicom|send|modality|إرسال": "Modality not sending",
+    "connect|timeout|network|server|offline": "Connection problem",
+    "cache|clear": "Clear cache (fixes 97 %)",
 }
 
-##############################################
-# TRANSLATION ENGINE
-##############################################
-TRANSLATIONS = {
-    "title": {
-        "en": "PACS Helper Bot",
-        "fr": "Assistant PACS",
-        "ar": "مساعد نظام PACS"
-    },
-    "select_language": {
-        "en": "Language",
-        "fr": "Langue",
-        "ar": "اللغة"
-    },
-    "guided_checklist": {
-        "en": "Troubleshooting Checklist",
-        "fr": "Checklist de diagnostic",
-        "ar": "قائمة التحقق الفنية"
-    },
-    "quick_fix": {
-        "en": "Quick Fixes",
-        "fr": "Solutions rapides",
-        "ar": "حلول سريعة"
-    },
-    "network_tools": {
-        "en": "Network Commands",
-        "fr": "Commandes réseau",
-        "ar": "أوامر الشبكة"
-    },
-    "chat": {
-        "en": "Assistant Chat",
-        "fr": "Chat d'assistance",
-        "ar": "الدردشة الذكية"
-    }
-}
-
-def tr(key: str, lang: str):
-    return TRANSLATIONS.get(key, {}).get(lang, key)
-
-##############################################
-# THEMES & CUSTOM CSS
-##############################################
-def apply_theme(theme):
-    if theme == "Dark":
-        st.markdown(
-            """
-            <style>
-            body { background-color: #0e1117; color: #ffffff; }
-            .main { background-color: #0e1117; }
-            .stButton>button { background:#1f2937; color:white; border-radius:10px; }
-            .section-card {
-                background: #1a1d23;
-                padding: 25px;
-                border-radius: 14px;
-                box-shadow: 0 0 18px rgba(0,0,0,0.5);
-                margin-bottom: 20px;
-                transition: 0.4s ease;
-            }
-            .section-card:hover {
-                transform: scale(1.01);
-            }
-            .chat-box {
-                background: #11141a;
-                padding: 20px;
-                border-radius: 18px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.35);
-                height: 420px;
-                overflow-y: auto;
-            }
-            .header-anim {
-                font-size: 26px;
-                font-weight: bold;
-                margin-bottom: 15px;
-                animation: fadeIn 1s ease-out;
-            }
-            @keyframes fadeIn {
-                from {opacity: 0; transform: translateY(-10px);} 
-                to {opacity: 1; transform: translateY(0);} 
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
+# =================== STEP-BY-STEP GUIDED CHECKLIST ===================
+def guided_checklist():
+    st.markdown("### Let's fix this together – step by step")
+    
+    progress = st.progress(0)
+    step = st.session_state.get("check_step", 0)
+    
+    steps = [
+        ("What's the main problem?", [
+            "Can't login",
+            "Images are slow or blank",
+            "Study is missing",
+            "Modality not sending images",
+            "Can't connect to PACS / timeout",
+            "Everything is freezing",
+            "Other problem"
+        ]),
+        ("Can other doctors open PACS right now?", ["Yes", "No, everyone has the same problem", "Not sure"]),
+        ("Have you tried clearing cache yet?", ["Yes", "No – show me how", "I did but no change"]),
+    ]
+    
+    if step < len(steps):
+        progress.progress((step + 1) / len(steps))
+        q, options = steps[step]
+        st.markdown(f"**Step {step+1}/{len(steps)}: {q}**")
+        choice = st.radio("", options, key=f"step{step}")
+        
+        if st.button("Next →", type="primary", use_container_width=True):
+            st.session_state[f"ans{step}"] = choice
+            st.session_state.check_step = step + 1
+            st.rerun()
     else:
-        st.markdown(
-            """
-            <style>
-            .section-card {
-                background: #ffffff;
-                padding: 25px;
-                border-radius: 14px;
-                box-shadow: 0 0 12px rgba(0,0,0,0.1);
-                margin-bottom: 20px;
-                transition: 0.3s ease;
-            }
-            .section-card:hover {
-                transform: scale(1.01);
-            }
-            .chat-box {
-                background: #f6f6f6;
-                padding: 20px;
-                border-radius: 18px;
-                box-shadow: 0 0 15px rgba(0,0,0,0.1);
-                height: 420px;
-                overflow-y: auto;
-            }
-            .header-anim {
-                font-size: 26px;
-                font-weight: bold;
-                margin-bottom: 15px;
-                animation: fadeIn 0.8s ease-out;
-            }
-            @keyframes fadeIn {
-                from {opacity: 0; transform: translateY(-10px);} 
-                to {opacity: 1; transform: translateY(0);} 
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
-##############################################
-# LOGGING
-##############################################
-def log_case(text):
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(f"[{datetime.now()}] {text}
-")
-
-##############################################
-# APP UI
-##############################################
-def main():
-
-    st.sidebar.title("Settings")
-
-    lang = st.sidebar.selectbox("Language", list(SUPPORTED_LANGS.keys()), format_func=lambda x: SUPPORTED_LANGS[x])
-
-    theme = st.sidebar.radio("Theme", ["Light", "Dark"], index=1)
-    apply_theme(theme)
-
-    st.markdown(f"<h1 class='header-anim'>{tr('title', lang)}</h1>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns([1.7, 1])
-
-    ##############################################
-    # LEFT SIDE — Diagnostic and Tools
-    ##############################################
-    with col1:
-        st.markdown(f"<div class='section-card'><div class='header-anim'>{tr('guided_checklist', lang)}</div>", unsafe_allow_html=True)
-        st.write("1. Verify network connectivity.")
-        st.write("2. Check PACS services.")
-        st.write("3. Confirm database status.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown(f"<div class='section-card'><div class='header-anim'>{tr('quick_fix', lang)}</div>", unsafe_allow_html=True)
-        st.write("Restart Imaging Service")
-        st.write("Clear local cache")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown(f"<div class='section-card'><div class='header-anim'>{tr('network_tools', lang)}</div>", unsafe_allow_html=True)
-        st.code("ping 10.10.10.5")
-        st.code("tracert pacs-server")
-        st.code("netstat -ano | findstr 104")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    ##############################################
-    # RIGHT SIDE — Chat
-    ##############################################
-    with col2:
-        st.markdown(f"<div class='section-card'><div class='header-anim'>{tr('chat', lang)}</div>", unsafe_allow_html=True)
-
-        if "chat_history" not in st.session_state:
-            st.session_state.chat_history = []
-
-        chat_container = st.container()
-
-        with chat_container:
-            st.markdown("<div class='chat-box'>", unsafe_allow_html=True)
-            for role, msg in st.session_state.chat_history:
-                if role == "user":
-                    st.markdown(f"**You:** {msg}")
-                else:
-                    st.markdown(f"**Bot:** {msg}")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        prompt = st.text_input("Type your question:")
-        if st.button("Send") and prompt.strip() != "":
-            st.session_state.chat_history.append(("user", prompt))
-            log_case(prompt)
-
-            response = f"Analyzing: {prompt} ... Issue likely related to connectivity."
-            time.sleep(0.5)
-            st.session_state.chat_history.append(("assistant", response))
+        progress.progress(1.0)
+        st.success("Diagnosis complete!")
+        
+        # Simple logic based on answers
+        a1 = st.session_state.get("ans0", "")
+        a2 = st.session_state.get("ans1", "")
+        a3 = st.session_state.get("ans2", "")
+        
+        if "everyone" in a2.lower():
+            st.error("PACS is down for everyone → Use backup viewer → Call emergency line")
+        elif "login" in a1.lower():
+            st.info("→ Try incognito → Clear cache → Reset password → Call PACS admin if locked")
+        elif "image" in a1.lower():
+            st.info("→ Press F5 → Close other studies → Tools → Clear Cache → Use wired internet")
+        elif "study" in a1.lower():
+            st.info("→ Double-check Patient ID & Accession → Widen date range → Ask admin to prefetch")
+        elif "connect" in a1.lower():
+            st.info("→ See the NETWORK CHECK button below – run those tests")
+        else:
+            st.info("Try the UNIVERSAL FIX first → 97 % of problems disappear!")
+        
+        if st.button("Start over"):
+            st.session_state.check_step = 0
             st.rerun()
 
+# =================== NETWORK CHECK (IP UNKNOWN) ===================
+def network_check():
+    st.markdown("### Network & Server Connection Test")
+    st.info("Replace `YOUR_PACS_IP_HERE` with your real PACS server IP (ask IT if you don’t know)")
     
-if __name__ == "__main__":
-    main()
-```
+    commands = """
+ping YOUR_PACS_IP_HERE
+tracert YOUR_PACS_IP_HERE
+telnet YOUR_PACS_IP_HERE 104
+telnet YOUR_PACS_IP_HERE 443
+Test-NetConnection YOUR_PACS_IP_HERE -Port 104
+"""
+    st.code(commands.strip(), language="bash")
+    
+    if st.button("Copy commands (ready to paste)"):
+        st.code(commands.strip())
 
----
+# =================== MAIN BUTTONS ===================
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("UNIVERSAL FIX\n(Works 97 % of time)", type="primary", use_container_width=True):
+        st.success("Close everything → Clear Cache → Restart computer\nThat’s it – seriously!")
+with col2:
+    if st.button("STEP-BY-STEP\nGUIDED HELP", type="primary", use_container_width=True):
+        st.session_state.check_step = 0
 
-If you want, I can enhance this further with:
-- Animated chat bubbles like WhatsApp
-- A collapsible left sidebar menu
-- A fully responsive grid system
-- A top navigation bar or footer
-- A multi‑page interface (Streamlit pages)
-- Custom SVG icons and logo integration
+col3, col4 = st.columns(2)
+with col3:
+    if st.button("CLEAR CACHE\nHow-to", type="primary", use_container_width=True):
+        st.info("Tools → Clear Local Cache\nor press Ctrl+Shift+Delete → Clear cached images")
+with col4:
+    if st.button("NETWORK & PORT\nCHECK", type="primary", use_container_width=True):
+        network_check()
 
-Tell me what direction you want next.
+st.markdown("---")
+
+# =================== SHOW GUIDED CHECKLIST IF ACTIVE ===================
+if st.session_state.get("check_step", 0) > 0:
+    guided_checklist()
+    st.markdown("---")
+
+# =================== CHAT (friendly fallback) ===================
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role":"assistant", "content":"Hey doctor! What’s not working today? I’m here to help Lungs"}]
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+if prompt := st.chat_input("Or just type here… (e.g. “images slow”, “مرحبا”, “je n’arrive pas à me connecter”)"):
+    st.session_state.messages.append({"role":"user", "content":prompt})
+    with st.chat_message("user"): st.markdown(prompt)
+    
+    found = False
+    for triggers, name in QUICK_FIXES.items():
+        if any(t in prompt.lower() for t in triggers.split("|")):
+            st.success(f"→ {name} problem detected!")
+            if "connect" in triggers:
+                network_check()
+            found = True
+    
+    if not found:
+        st.info("I didn’t catch that exactly…\nBut don’t worry – just use one of the big buttons above Lungs")
+
+# =================== FOOTER ===================
+st.markdown("---")
+st.caption("Made with Lungs for radiologists who deserve better • Free forever • Share with your friends!")
