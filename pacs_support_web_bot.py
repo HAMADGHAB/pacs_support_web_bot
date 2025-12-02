@@ -1,40 +1,91 @@
-# =============================================
-# PACS SUPPORT BOT v10 – SUPER FRIENDLY EDITION
-# =============================================
+"""
+PACS Helper Bot — Modular Streamlit app
+Single-file modular architecture suitable for later splitting into package files.
+Features:
+- Language switch (en/fr/ar)
+- Dark / Light mode toggle
+- Sections: Quick Fixes, Guided Checklist, Network Check, Chat
+- Simple animations via CSS / HTML
+- Clean separation: TRANSLATIONS, UI helpers, Logic, App
+- Logging to local file (./logs/cases.log)
+
+Run: streamlit run pacs_helper_bot_modular.py
+"""
 
 import streamlit as st
+import json
+import datetime
+import os
+from typing import Dict, List, Tuple
 
-st.set_page_config(
-    page_title="PACS Helper Bot",
-    page_icon="Lungs",                    # Friendliest radiology icon
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+# ---------------------------
+# CONFIG & TRANSLATIONS
+# ---------------------------
+APP_CONFIG = {
+    "title": "PACS Helper Bot",
+    "supported_langs": ["en", "fr", "ar"],
+}
 
-# =================== WARM & FRIENDLY DESIGN ===================
-st.markdown("""
-<style>
-    .main {background: linear-gradient(to bottom, #f0f7ff, #e1f0ff); min-height: 100vh;}
-    .block-container {background: white; border-radius: 25px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);}
-    .big-title {font-size: 3.8rem !important; font-weight: 900; text-align: center; 
-                background: linear-gradient(to right, #4facfe, #00f2fe); 
-                -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-    .friend-btn button {height: 80px !important; font-size: 1.3rem !important; 
-                        background: linear-gradient(45deg, #667eea, #764ba2) !important; 
-                        border-radius: 20px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;}
-    .step-box {background: #f8f9ff; padding: 1.5rem; border-radius: 15px; border-left: 6px solid #4facfe; margin: 1rem 0;}
-    .stChatMessage {border-radius: 18px; padding: 1rem;}
-    [data-testid="stChatMessageUser"] {background: #e3f2fd;}
-    [data-testid="stChatMessageAssistant"] {background: #f3e5f5;}
-</style>
-""", unsafe_allow_html=True)
+TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    "en": {
+        "page_title": "PACS Helper Bot",
+        "subtitle": "Your 24/7 PACS assistant — English • عربي • Français",
+        "just_tell": "Just tell me what’s wrong — I’ll guide you step by step",
+        "universal_fix": "UNIVERSAL FIX (Works 97% of time)",
+        "step_help": "STEP-BY-STEP GUIDED HELP",
+        "clear_cache": "CLEAR CACHE — How-to",
+        "network_check": "NETWORK & PORT CHECK",
+        "start_over": "Start over",
+        "diagnosis_complete": "Diagnosis complete!",
+        "copy_commands": "Copy commands (ready to paste)",
+        "chat_placeholder": "Or just type here… (e.g. 'images slow', 'مرحبا', 'je n’arrive pas à me connecter')",
+        "footer": "Made with care for radiologists • Free forever",
+        "lang_label": "Language",
+        "theme_label": "Theme",
+        "theme_light": "Light",
+        "theme_dark": "Dark",
+        "show_quickfix": "Quick fixes detected →",
+    },
+    "fr": {
+        "page_title": "Assistant PACS",
+        "subtitle": "Votre assistant PACS 24/7 — English • عربي • Français",
+        "just_tell": "Dites-moi ce qui ne va pas — je vous guide pas à pas",
+        "universal_fix": "RÉPARATION UNIVERSELLE (Fonctionne 97 % du temps)",
+        "step_help": "AIDE GUIDÉE PAS-À-PAS",
+        "clear_cache": "VIDE LE CACHE — Comment faire",
+        "network_check": "VÉRIFICATION RÉSEAU & PORTS",
+        "start_over": "Recommencer",
+        "diagnosis_complete": "Diagnostic terminé !",
+        "copy_commands": "Copier les commandes (prêtes à coller)",
+        "chat_placeholder": "Ou tapez ici… (p.ex. 'images lentes', 'مرحبا', 'je n'arrive pas à me connecter')",
+        "footer": "Fait avec soin pour les radiologues • Gratuit à vie",
+        "lang_label": "Langue",
+        "theme_label": "Thème",
+        "theme_light": "Clair",
+        "theme_dark": "Sombre",
+        "show_quickfix": "Correctif rapide détecté →",
+    },
+    "ar": {
+        "page_title": "مساعد PACS",
+        "subtitle": "مساعدك في نظام PACS على مدار الساعة — English • عربي • Français",
+        "just_tell": "أخبرني بما يحدث — سأرشدك خطوة بخطوة",
+        "universal_fix": "الإصلاح الشامل (ينجح 97% من الوقت)",
+        "step_help": "المساعدة الإرشادية خطوة بخطوة",
+        "clear_cache": "مسح ذاكرة التخزين المؤقت — كيفية",
+        "network_check": "اختبار الشبكة والمنافذ",
+        "start_over": "إعادة البدء",
+        "diagnosis_complete": "اكتمل التشخيص!",
+        "copy_commands": "نسخ الأوامر (جاهزة للصق)",
+        "chat_placeholder": "أو اكتب هنا… (مثلًا: 'الصور بطيئة', 'مرحبا', 'لا أستطيع الاتصال')",
+        "footer": "صُنع بعناية لأخصائيي الأشعة • مجانًا إلى الأبد",
+        "lang_label": "اللغة",
+        "theme_label": "الوضع",
+        "theme_light": "فاتح",
+        "theme_dark": "داكن",
+        "show_quickfix": "تم الكشف عن حل سريع →",
+    }
+}
 
-# =================== HEADER ===================
-st.markdown('<h1 class="big-title">PACS Helper Bot</h1>', unsafe_allow_html=True)
-st.markdown("<h3 style='text-align:center; color:#555;'>Your friendly 24/7 PACS assistant<br>English • عربي • Français</h3>", unsafe_allow_html=True)
-st.markdown("###### 😊 Just tell me what’s wrong – I’ll fix it step by step")
-
-# =================== QUICK FIXES DATABASE ===================
 QUICK_FIXES = {
     "login|password|locked|تسجيل|mot de passe": "Login problem",
     "image|slow|blank|not load|صور|lent": "Images not loading",
@@ -44,46 +95,154 @@ QUICK_FIXES = {
     "cache|clear": "Clear cache (fixes 97 %)",
 }
 
-# =================== STEP-BY-STEP GUIDED CHECKLIST ===================
-def guided_checklist():
-    st.markdown("### Let's fix this together – step by step")
-    
-    progress = st.progress(0)
+# ---------------------------
+# UTILITIES
+# ---------------------------
+
+def t(lang: str, key: str) -> str:
+    """Translation helper with fallback to English."""
+    return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, TRANSLATIONS["en"].get(key, key))
+
+
+def ensure_logs_dir():
+    os.makedirs("logs", exist_ok=True)
+
+
+def log_case(case: dict):
+    ensure_logs_dir()
+    path = os.path.join("logs", "cases.log")
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(case, ensure_ascii=False) + "\n")
+
+# ---------------------------
+# UI / CSS
+# ---------------------------
+
+LIGHT_CSS = """
+:root{
+  --bg: #f0f7ff;
+  --card: #ffffff;
+  --accent1: linear-gradient(90deg,#4facfe,#00f2fe);
+  --text: #111827;
+}
+"""
+
+DARK_CSS = """
+:root{
+  --bg: linear-gradient(180deg,#061021,#092133);
+  --card: #0b1220;
+  --accent1: linear-gradient(90deg,#6ee7b7,#60a5fa);
+  --text: #e5eef8;
+}
+"""
+
+BASE_CSS = """
+<style>
+html, body, [data-testid='stAppViewContainer'] {background: var(--bg) !important; color: var(--text) !important}
+.block-container {background: var(--card) !important; border-radius: 16px; padding: 1.6rem}
+.big-title {font-size: 2.6rem; font-weight: 800; text-align:center; background: var(--accent1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+.header-sub {text-align:center; color: #9aa4b2;}
+.friend-btn button {height: 64px !important; font-size: 1.05rem !important; border-radius: 12px !important}
+.step-box {background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; margin: 0.7rem 0}
+.animated-pulse {animation: pulse 2.5s infinite}
+@keyframes pulse {0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
+</style>
+"""
+
+def inject_theme_css(is_dark: bool):
+    css = DARK_CSS if is_dark else LIGHT_CSS
+    st.markdown(css + BASE_CSS, unsafe_allow_html=True)
+
+# ---------------------------
+# LOGIC MODULE
+# ---------------------------
+
+class QuickFixEngine:
+    def __init__(self, quick_map: Dict[str, str]):
+        self.mapping = quick_map
+
+    def detect(self, prompt: str) -> Tuple[bool, str]:
+        p = prompt.lower()
+        for triggers, name in self.mapping.items():
+            for tkn in triggers.split("|"):
+                if tkn.strip() and tkn in p:
+                    return True, name
+        return False, ""
+
+quick_engine = QuickFixEngine(QUICK_FIXES)
+
+# ---------------------------
+# UI COMPONENTS
+# ---------------------------
+
+def render_header(lang: str):
+    st.markdown(f"<h1 class='big-title'>{t(lang,'page_title')}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<div class='header-sub'><h4>{t(lang,'subtitle')}</h4></div>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center; color:var(--text);'>{t(lang,'just_tell')}</p>")
+
+
+def render_sidebar(lang: str):
+    st.sidebar.title(t(lang, "page_title"))
+    lang_choice = st.sidebar.selectbox(t(lang, "lang_label"), APP_CONFIG["supported_langs"], index=APP_CONFIG["supported_langs"].index(lang))
+    theme_choice = st.sidebar.radio(t(lang, "theme_label"), [t(lang, "theme_light"), t(lang, "theme_dark")])
+    return lang_choice, theme_choice
+
+
+def quick_fixes_panel(lang: str):
+    st.subheader(t(lang, "show_quickfix"))
+    cols = st.columns(3)
+    for i, (k, v) in enumerate(QUICK_FIXES.items()):
+        with cols[i % 3]:
+            if st.button(v):
+                st.success(f"→ {v}")
+
+
+def network_check_ui(lang: str):
+    st.markdown(f"### {t(lang,'network_check')}")
+    st.info("Replace YOUR_PACS_IP_HERE with your PACS server IP — or use the automatic test below")
+    commands = """
+ping YOUR_PACS_IP_HERE
+tracert YOUR_PACS_IP_HERE
+telnet YOUR_PACS_IP_HERE 104
+telnet YOUR_PACS_IP_HERE 443
+Test-NetConnection YOUR_PACS_IP_HERE -Port 104
+"""
+    st.code(commands.strip(), language="bash")
+    if st.button(t(lang, "copy_commands")):
+        st.write(commands)
+
+
+def guided_checklist_ui(lang: str):
+    st.markdown(f"### {t(lang,'step_help')}")
+    # maintain steps in session
     step = st.session_state.get("check_step", 0)
-    
+    progress = st.progress(0)
+
     steps = [
-        ("What's the main problem?", [
-            "Can't login",
-            "Images are slow or blank",
-            "Study is missing",
-            "Modality not sending images",
-            "Can't connect to PACS / timeout",
-            "Everything is freezing",
-            "Other problem"
+        (t(lang, "just_tell"), [
+            "Can't login", "Images are slow or blank", "Study is missing", "Modality not sending images", "Can't connect to PACS / timeout", "Everything is freezing", "Other problem"
         ]),
         ("Can other doctors open PACS right now?", ["Yes", "No, everyone has the same problem", "Not sure"]),
         ("Have you tried clearing cache yet?", ["Yes", "No – show me how", "I did but no change"]),
     ]
-    
+
     if step < len(steps):
         progress.progress((step + 1) / len(steps))
-        q, options = steps[step]
+        q, opts = steps[step]
         st.markdown(f"**Step {step+1}/{len(steps)}: {q}**")
-        choice = st.radio("", options, key=f"step{step}")
-        
-        if st.button("Next →", type="primary", use_container_width=True):
+        choice = st.radio("", opts, key=f"step{step}")
+        if st.button("Next →"):
             st.session_state[f"ans{step}"] = choice
             st.session_state.check_step = step + 1
-            st.rerun()
+            st.experimental_rerun()
     else:
         progress.progress(1.0)
-        st.success("Diagnosis complete!")
-        
-        # Simple logic based on answers
+        st.success(t(lang, "diagnosis_complete"))
         a1 = st.session_state.get("ans0", "")
         a2 = st.session_state.get("ans1", "")
         a3 = st.session_state.get("ans2", "")
-        
+
+        # Simple decision tree
         if "everyone" in a2.lower():
             st.error("PACS is down for everyone → Use backup viewer → Call emergency line")
         elif "login" in a1.lower():
@@ -93,78 +252,131 @@ def guided_checklist():
         elif "study" in a1.lower():
             st.info("→ Double-check Patient ID & Accession → Widen date range → Ask admin to prefetch")
         elif "connect" in a1.lower():
-            st.info("→ See the NETWORK CHECK button below – run those tests")
+            st.info("→ Run network & port checks using the button above")
         else:
             st.info("Try the UNIVERSAL FIX first → 97 % of problems disappear!")
-        
-        if st.button("Start over"):
+
+        if st.button(t(lang, "start_over")):
             st.session_state.check_step = 0
-            st.rerun()
+            st.experimental_rerun()
 
-# =================== NETWORK CHECK (IP UNKNOWN) ===================
-def network_check():
-    st.markdown("### Network & Server Connection Test")
-    st.info("Replace `YOUR_PACS_IP_HERE` with your real PACS server IP (ask IT if you don’t know)")
-    
-    commands = """
-ping YOUR_PACS_IP_HERE
-tracert YOUR_PACS_IP_HERE
-telnet YOUR_PACS_IP_HERE 104
-telnet YOUR_PACS_IP_HERE 443
-Test-NetConnection YOUR_PACS_IP_HERE -Port 104
-"""
-    st.code(commands.strip(), language="bash")
-    
-    if st.button("Copy commands (ready to paste)"):
-        st.code(commands.strip())
 
-# =================== MAIN BUTTONS ===================
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("UNIVERSAL FIX\n(Works 97 % of time)", type="primary", use_container_width=True):
-        st.success("Close everything → Clear Cache → Restart computer\nThat’s it – seriously!")
-with col2:
-    if st.button("STEP-BY-STEP\nGUIDED HELP", type="primary", use_container_width=True):
-        st.session_state.check_step = 0
+def chat_ui(lang: str):
+    st.markdown("---")
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": f"Hey — {t(lang,'just_tell')}"}]
 
-col3, col4 = st.columns(2)
-with col3:
-    if st.button("CLEAR CACHE\nHow-to", type="primary", use_container_width=True):
-        st.info("Tools → Clear Local Cache\nor press Ctrl+Shift+Delete → Clear cached images")
-with col4:
-    if st.button("NETWORK & PORT\nCHECK", type="primary", use_container_width=True):
-        network_check()
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-st.markdown("---")
+    prompt = st.chat_input(t(lang, "chat_placeholder"))
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        # quick fix detection
+        found, name = quick_engine.detect(prompt)
+        if found:
+            st.session_state.messages.append({"role": "assistant", "content": f"{t(lang,'show_quickfix')} {name}"})
+            st.success(f"→ {name}")
+        else:
+            st.session_state.messages.append({"role": "assistant", "content": "I didn't catch that exactly — please try keywords or use guided help."})
 
-# =================== SHOW GUIDED CHECKLIST IF ACTIVE ===================
-if st.session_state.get("check_step", 0) > 0:
-    guided_checklist()
+        # optionally log the interaction
+        case = {
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "prompt": prompt,
+            "detected": name if found else None,
+        }
+        log_case(case)
+
+# ---------------------------
+# APP
+# ---------------------------
+
+def main():
+    # initial settings
+    st.set_page_config(page_title=APP_CONFIG["title"], layout="centered")
+
+    # persistent defaults
+    if "lang" not in st.session_state:
+        st.session_state.lang = "en"
+    if "theme" not in st.session_state:
+        st.session_state.theme = "light"
+
+    # sidebar controls
+    lang_choice, theme_choice = render_sidebar(st.session_state.lang)
+    # map theme radio label back to boolean
+    is_dark = theme_choice == TRANSLATIONS.get(lang_choice, TRANSLATIONS["en"]).get("theme_dark")
+
+    # update session state only if changed
+    st.session_state.lang = lang_choice
+    st.session_state.theme = "dark" if is_dark else "light"
+
+    # inject CSS
+    inject_theme_css(is_dark)
+
+    # header and layout
+    render_header(st.session_state.lang)
+
+    # top buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(t(st.session_state.lang, "universal_fix")):
+            st.success("Close everything → Clear Cache → Restart computer — That often fixes it.")
+    with col2:
+        if st.button(t(st.session_state.lang, "step_help")):
+            st.session_state.check_step = 0
+            st.experimental_rerun()
+
+    col3, col4 = st.columns(2)
+    with col3:
+        if st.button(t(st.session_state.lang, "clear_cache")):
+            st.info("Tools → Clear Local Cache (or Ctrl+Shift+Delete) → Clear cached images")
+    with col4:
+        if st.button(t(st.session_state.lang, "network_check")):
+            network_check_ui(st.session_state.lang)
+
     st.markdown("---")
 
-# =================== CHAT (friendly fallback) ===================
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role":"assistant", "content":"Hey doctor! What’s not working today? I’m here to help Lungs"}]
+    # two-column content: left = panels, right = logs / animations
+    left, right = st.columns([2, 1])
+    with left:
+        # Quick fixes & guided checklist
+        with st.expander(t(st.session_state.lang, "universal_fix")):
+            quick_fixes_panel(st.session_state.lang)
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        if st.session_state.get("check_step", 0) > 0:
+            guided_checklist_ui(st.session_state.lang)
+        else:
+            st.info(t(st.session_state.lang, "just_tell"))
 
-if prompt := st.chat_input("Or just type here… (e.g. “images slow”, “مرحبا”, “je n’arrive pas à me connecter”)"):
-    st.session_state.messages.append({"role":"user", "content":prompt})
-    with st.chat_message("user"): st.markdown(prompt)
-    
-    found = False
-    for triggers, name in QUICK_FIXES.items():
-        if any(t in prompt.lower() for t in triggers.split("|")):
-            st.success(f"→ {name} problem detected!")
-            if "connect" in triggers:
-                network_check()
-            found = True
-    
-    if not found:
-        st.info("I didn’t catch that exactly…\nBut don’t worry – just use one of the big buttons above Lungs")
+        # chat fallback
+        chat_ui(st.session_state.lang)
 
-# =================== FOOTER ===================
-st.markdown("---")
-st.caption("Made with Lungs for radiologists who deserve better • Free forever • Share with your friends!")
+    with right:
+        # small animation / status card
+        st.markdown("<div class='step-box animated-pulse'><h4>System Status</h4><p>All good — no critical incidents reported.</p></div>", unsafe_allow_html=True)
+        # recent logs preview
+        st.markdown("### Recent cases")
+        try:
+            path = os.path.join("logs", "cases.log")
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()[-5:]
+                for ln in reversed(lines):
+                    try:
+                        obj = json.loads(ln)
+                        st.write(f"{obj.get('timestamp')} — {obj.get('prompt')} — Detected: {obj.get('detected')}")
+                    except Exception:
+                        continue
+            else:
+                st.write("No cases yet — interactions will be logged here.")
+        except Exception as e:
+            st.write("Error reading logs")
+
+    st.markdown("---")
+    st.caption(t(st.session_state.lang, "footer"))
+
+
+if __name__ == '__main__':
+    main()
