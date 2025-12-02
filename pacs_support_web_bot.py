@@ -1,156 +1,122 @@
 import streamlit as st
 
-st.set_page_config(page_title="PACS Support Bot v5", page_icon="🩻", layout="centered")
+# === PAGE CONFIG & BEAUTIFUL THEME ===
+st.set_page_config(
+    page_title="PACS Support Bot",
+    page_icon="❤️",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
 
+# === CUSTOM CSS – makes it look premium ===
 st.markdown("""
 <style>
-    .big-title {font-size: 3rem !important; font-weight: bold; text-align: center; color: #1E88E5;}
-    .subtitle {font-size: 1.3rem; text-align: center; color: #555;}
+    .main {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;}
+    .block-container {background: rgba(255,255,255,0.98); border-radius: 20px; padding: 2rem; margin-top: 2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1);}
+    .big-title {font-size: 3.5rem !important; font-weight: 900; text-align: center; background: linear-gradient(to right, #1E88E5, #8E24AA); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+    .subtitle {font-size: 1.4rem; text-align: center; color: #444; margin-bottom: 1rem;}
+    .stChatMessage {border-radius: 15px; padding: 1rem; margin: 0.8rem 0;}
+    .stChatMessage[data-testid="stChatMessageUser"] {background: #E3F2FD; border-left: 5px solid #1E88E5;}
+    .stChatMessage[data-testid="stChatMessageAssistant"] {background: #F3E5F5; border-left: 5px solid #8E24AA;}
+    .css-1v0mbdj {font-size: 1.1rem !important;}
+    .troubleshoot-btn button {background: linear-gradient(to right, #FF6B6B, #FF8E53) !important; color: white !important; font-weight: bold !important; border-radius: 50px !important; padding: 12px 30px !important;}
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="big-title">🩻 PACS Support Bot v5</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">99 % instant answers + guided step-by-step troubleshooter when needed<br>English • عربي • Français</p>', unsafe_allow_html=True)
-st.caption("The only PACS tool you’ll ever open 🔥")
+# === HEADER ===
+st.markdown('<h1 class="big-title">❤️ PACS Support Bot</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Instant fixes + guided troubleshooter • English • عربي • Français</p>', unsafe_allow_html=True)
+st.caption("🔥 Built by a radiologist who was tired of waiting on IT")
 
-# ====================== INSTANT FAQS (same 20+ as before) ======================
+# === QUICK FAQS (kept short – the beauty is in the guided mode) ===
 faqs = [
-    (["hi", "hello", "hey", "salut", "مرحبا"], "PACS Support Bot v5 ready 👋\nDescribe your problem…"),
-    (["login", "password", "locked", "تسجيل", "mot de passe"], "🔐 Login issue → Try: incognito → clear cache → reset password → call admin if locked"),
-    (["image", "slow", "blank", "لا تظهر", "lent"], "🖼️ Images slow/blank → F5 → close other studies → clear cache → wired internet"),
-    (["study", "missing", "not found", "غير موجود"], "🔍 Study missing → check ID/accession → widen date → ask prefetch"),
-    (["dicom", "send", "modality", "reject", "إرسال"], "📤 DICOM send fail → AE Title/IP/Port match? → restart modality → port 104 open?"),
-    (["cache", "clear cache", "مسح الكاش"], "🧹 Clear cache = fixes 95 % → Tools → Clear Local Cache → restart viewer"),
-    # (add the rest from v4 if you want – not needed because troubleshooter catches everything)
+    (["hi","hello","hey","salut","مرحبا"],"Hey doc! What’s broken today? ❤️"),
+    (["login","password","locked","تسجيل"],"Try incognito → clear cache → reset password → call admin if locked"),
+    (["image","slow","blank","صور","lent"],"F5 → close other studies → clear cache → wired internet"),
+    (["study","missing","غير موجود"],"Check exact ID → widen date → ask prefetch"),
+    (["dicom","send","modality","إرسال"],"AE Title/IP/Port match? → restart modality → port 104 open?"),
+    (["cache","clear"],"Tools → Clear Local Cache → restart viewer"),
 ]
 
-def quick_answer(txt):
-    txt = txt.lower()
+def quick_answer(text):
+    text = text.lower()
     for keywords, answer in faqs:
-        if any(k in txt for k in keywords):
+        if any(k in text for k in keywords):
             return answer
     return None
 
-# ====================== GUIDED TROUBLESHOOTER ======================
-def troubleshooter():
-    st.session_state.step = st.session_state.get("step", 0)
-    step = st.session_state.step
-
-    questions = [
-        ("What is the main problem right now?", 
-         ["1️⃣ Can't login", "2️⃣ Images not loading / slow", "3️⃣ Study missing", 
-          "4️⃣ Modality not sending (DICOM)", "5️⃣ Connectivity / timeout", "6️⃣ Other / not sure"]),
-
-        ("Can you open the PACS website/login page at all?", 
-         ["Yes, page opens but login fails", "No, page won't load / timeout", "I use thin client (Citrix/VMware)"]),
-
-        ("Are other people in your department having the same issue right now?", 
-         ["Yes, everyone", "No, only me", "Not sure"]),
-
-        ("Have you tried clearing the cache yet?", 
-         ["Yes, already did", "No, how?", "I don't know where"]),
-    ]
-
-    if step == 0:
-        st.markdown("### Let me walk you through this step-by-step 🚀")
+# === GUIDED TROUBLESHOOTER (now beautiful too) ===
+def guided_troubleshooter():
+    st.markdown("<h2 style='text-align:center; color:#8E24AA;'>Let me fix this for you step by step 🚀</h2>", unsafe_allow_html=True)
     
-    if step < len(questions):
-        q, options = questions[step]
-        st.markdown(f"**Step {step+1}: {q}**")
-        choice = st.radio("Select one:", options, key=f"q{step}")
-        
-        if st.button("Next →", type="primary"):
-            st.session_state.answers = st.session_state.get("answers", []) + [choice]
-            st.session_state.step += 1
-            st.rerun()
+    steps = [
+        ("What's the main problem?", ["Can't login", "Images slow / blank", "Study missing", "Modality not sending", "Connectivity / timeout", "Freezing / crashing", "Other"]),
+        ("Can others in your department open PACS right now?", ["Yes, they can", "No, everyone is down", "Not sure"]),
+        ("Have you tried clearing cache yet?", ["Yes", "No, show me how", "Already did, no help"]),
+    ]
+    
+    if "ts_step" not in st.session_state:
+        st.session_state.ts_step = 0
+        st.session_state.answers = []
+
+    step = st.session_state.ts_step
+    if step < len(steps):
+        q, options = steps[step]
+        st.markdown(f"<h4>{step+1}. {q}</h4>", unsafe_allow_html=True)
+        choice = st.radio("", options, key=f"ts{step}")
+        col1, col2 = st.columns([1,1])
+        with col2:
+            if st.button("Next →", type="primary", use_container_width=True):
+                st.session_state.answers.append(choice)
+                st.session_state.ts_step += 1
+                st.rerun()
     else:
-        # Final diagnosis based on answers
-        a1, a2, a3, a4 = st.session_state.answers[:4]
-
-        st.markdown("### Diagnosis & Fix (99 % accurate)")
+        st.success("Diagnosis ready!")
+        a1, a2, a3 = st.session_state.answers
         
-        if "login" in a1.lower() or "login" in a2:
-            st.error("🔒 Login problem")
-            st.markdown("""
-            • Try incognito window  
-            • Clear browser cache (Ctrl+Shift+Delete)  
-            • Reset password via “Forgot password”  
-            • Account locked → only PACS admin can unlock  
-            • VPN expired? Re-connect  
-            """)
-
-        elif "image" in a1.lower():
-            st.error("🖼️ Image loading problem")
-            st.markdown("""
-            1. Press F5  
-            2. Close all other studies  
-            3. Tools → Clear Local Cache  
-            4. Use wired internet  
-            5. Restart viewer completely  
-            Still nothing? → server is overloaded, wait 10 min
-            """)
-
-        elif "study" in a1.lower():
-            st.error("🔍 Study not found")
-            st.markdown("""
-            • Exact Patient ID / Accession number?  
-            • Widen date range ±7 days  
-            • Check Archive tab  
-            • Ask admin: “Please prefetch from long-term archive”
-            """)
-
-        elif "modality" in a1.lower() or "dicom" in a1.lower():
-            st.error("📤 Modality not sending")
-            st.markdown("""
-            • AE Title, IP, Port 104 exactly the same on modality and PACS?  
-            • Restart modality  
-            • Check modality DICOM log (Association Rejected?)  
-            • Firewall port 104 blocked?  
-            """)
-
-        elif "everyone" in a3:
-            st.error("💀 PACS is down for everyone")
-            st.markdown("→ Planned maintenance or real outage\n→ Use backup viewer\n→ Call emergency PACS line")
-
+        if "login" in a1:
+            st.error("Most likely account or browser issue → incognito + clear cache + reset password")
+        elif "image" in a1:
+            st.error("Local cache or network → Clear cache → wired → restart viewer")
+        elif "study" in a1:
+            st.error("Wrong search or archived → exact ID + wide date + ask prefetch")
+        elif "everyone" in a2:
+            st.error("PACS is down globally → use backup viewer → call emergency line")
         else:
-            st.info("Probably a local problem → Do the universal fix:")
-            st.markdown("**Close everything → Clear cache → Restart computer**\nWorks 97 % of the time")
-
+            st.info("Try the universal fix: Close everything → Clear cache → Restart PC")
+        
         if st.button("Start over"):
-            st.session_state.step = 0
+            st.session_state.ts_step = 0
             st.session_state.answers = []
             st.rerun()
 
-# ====================== MAIN CHAT ======================
+# === MAIN CHAT ===
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role":"assistant", "content":"Hey doc! What’s broken today? 🩻"}]
+    st.session_state.messages = [{"role":"assistant","content":"Hey! What PACS nightmare are you facing today? ❤️"}]
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-if prompt := st.chat_input("Type your issue (or just say “help me” for guided mode)…"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+if prompt := st.chat_input("Describe your problem…"):
+    st.session_state.messages.append({"role":"user","content":prompt})
+    with st.chat_message("user"): st.markdown(prompt)
 
-    # Try quick answer first
     reply = quick_answer(prompt)
     if reply:
-        final = reply
-    elif any(x in prompt.lower() for x in ["step", "guide", "help me", "troubleshoot", "مشكلة", "diagnostic"]):
-        final = "Starting guided troubleshooter…"
-        st.session_state.mode = "troubleshooter"
+        final_reply = reply
+    elif any(x in prompt.lower() for x in ["guide","step","troubleshoot","help"]):
+        final_reply = "Starting guided troubleshooter…"
+        st.session_state.mode = "troubleshoot"
     else:
-        final = "I don’t know that one instantly.\nLet me guide you step-by-step → type **guide** or click below 👇"
+        final_reply = "I don’t know that one instantly.\nClick the button below for step-by-step help 👇"
 
-    st.session_state.messages.append({"role": "assistant", "content": final})
-    with st.chat_message("assistant"):
-        st.markdown(final)
+    st.session_state.messages.append({"role":"assistant","content":final_reply})
+    with st.chat_message("assistant"): st.markdown(final_reply)
 
-# Guided mode button
-if st.button("🔧 Run step-by-step troubleshooter", type="primary"):
-    st.session_state.mode = "troubleshooter"
+# === BIG BEAUTIFUL TROUBLESHOOTER BUTTON ===
+if st.button("🔧 Run Step-by-Step Troubleshooter", type="primary", use_container_width=True):
+    st.session_state.mode = "troubleshoot"
 
-if st.session_state.get("mode") == "troubleshooter":
-    troubleshooter()
+if st.session_state.get("mode") == "troubleshoot":
+    guided_troubleshooter()
