@@ -1,181 +1,170 @@
 # =============================================
-# PACS SUPPORT BOT v9 – MODULAR & PROFESSIONAL
+# PACS SUPPORT BOT v10 – SUPER FRIENDLY EDITION
 # =============================================
 
 import streamlit as st
 
-# ------------------- CONFIG -------------------
 st.set_page_config(
-    page_title="PACS Support Bot v9",
-    page_icon="Lungs",           # Friendliest radiology icon
+    page_title="PACS Helper Bot",
+    page_icon="Lungs",                    # Friendliest radiology icon
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# ------------------- CONSTANTS -------------------
-PACS_SERVER_IP = "192.168.1.50"   # Change this to your real PACS server IP
-EMERGENCY_NUMBER = "+123-456-7890"  # Add your real on-call number
-
-# ------------------- DATA: FIXES DATABASE -------------------
-FIXES_DB = {
-    "login": [
-        "Try incognito/private window",
-        "Clear browser cache (Ctrl+Shift+Delete)",
-        "Reset password via 'Forgot password'",
-        "If account locked → only PACS admin can unlock",
-        "Remote? → Reconnect VPN"
-    ],
-    "images? slow|blank|not load|black": [
-        "Press F5 or Ctrl+R",
-        "Close all other studies/tabs",
-        "Tools → Clear Local Cache",
-        "Use wired internet (not Wi-Fi)",
-        "Restart viewer completely"
-    ],
-    "study|missing|not found|can't find": [
-        "Double-check Patient ID, Name, DOB, Accession",
-        "Widen date range (±7 days)",
-        "Check Archive / All Studies tab",
-        "Still missing → ask admin: 'Please prefetch from archive'"
-    ],
-    "dicom|send|modality|reject|ae title": [
-        "AE Title, IP, Port 104 exactly identical?",
-        "Restart modality + workstation",
-        "Check modality DICOM log",
-        "Firewall blocking port 104?"
-    ],
-    "connect|timeout|server|network|offline|reach": [
-        "See the FULL NETWORK CHECKLIST button above",
-        "Run ping/telnet tests",
-        "VPN connected and not expired?"
-    ],
-    "cache|clear": [
-        "Tools → Clear Local Cache",
-        "Or Ctrl+Shift+Delete → Cached images",
-        "Close all studies first → restart viewer"
-    ],
-    "hanging|layout|protocol|order": [
-        "Right-click image → Reset Hanging Protocol",
-        "Or create and save a new one"
-    ],
-    "prior|comparison|old study": [
-        "Same exact Patient ID?",
-        "Ask admin to restore from long-term archive"
-    ],
-    "freeze|lag|citrix|vmware": [
-        "Lower screen resolution",
-        "Log out → log back in",
-        "Ask IT to restart your session"
-    ],
-    "3d|mpr|mip|reconstruction": [
-        "Update graphics driver",
-        "Lower 3D resolution",
-        "Clear 3D cache"
-    ],
-    "cd|dvd|burn|export": [
-        "Use viewer’s built-in burner (not Windows)",
-        "Blank CD-R (not RW)",
-        "Try USB export instead"
-    ],
-    "print|printer|film": [
-        "Correct Windows printer selected?",
-        "Paper size = Film or A4?",
-        "Try 'Print as image'"
-    ],
-}
-
-# ------------------- HELPERS -------------------
-def match_fix(user_input: str) -> tuple[bool, str, list[str]]:
-    """Return (found, title, steps)"""
-    text = user_input.lower()
-    for pattern, steps in FIXES_DB.items():
-        if any(trigger in text for trigger in pattern.split("|")):
-            title = pattern.split("|")[0].title().replace("?", "")
-            return True, title, steps
-    return False, "", []
-
-def render_fix(title: str, steps: list[str]):
-    st.success(f"**{title}**")
-    for step in steps:
-        st.markdown(f"• {step}")
-    if st.button("Copy all steps to clipboard", key=f"copy_{title}"):
-        st.code("\n".join(steps))
-
-def render_network_checklist():
-    st.markdown("### FULL NETWORK & SERVER CONNECTION CHECKLIST")
-    commands = f"""
-ping {PACS_SERVER_IP}
-tracert {PACS_SERVER_IP}
-telnet {PACS_SERVER_IP} 104
-telnet {PACS_SERVER_IP} 443
-Test-NetConnection {PACS_SERVER_IP} -Port 104   (PowerShell)
-"""
-    st.code(commands.strip(), language="bash")
-    if st.button("Copy all network commands"):
-        st.code(commands.strip())
-
-# ------------------- UI STYLES -------------------
+# =================== WARM & FRIENDLY DESIGN ===================
 st.markdown("""
 <style>
-    .main {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;}
-    .block-container {background: rgba(255,255,255,0.98); border-radius: 20px; padding: 2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.2);}
-    .big-title {font-size: 4rem !important; font-weight: 900; text-align: center; background: linear-gradient(to right, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-    .stChatMessage {border-radius: 15px; padding: 1rem; margin: 0.8rem 0;}
-    [data-testid="stChatMessageUser"] {background: #e3f2fd; border-left: 6px solid #2196f3;}
-    [data-testid="stChatMessageAssistant"] {background: #f3e5f5; border-left: 6px solid #9c27b0;}
+    .main {background: linear-gradient(to bottom, #f0f7ff, #e1f0ff); min-height: 100vh;}
+    .block-container {background: white; border-radius: 25px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);}
+    .big-title {font-size: 3.8rem !important; font-weight: 900; text-align: center; 
+                background: linear-gradient(to right, #4facfe, #00f2fe); 
+                -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+    .friend-btn button {height: 80px !important; font-size: 1.3rem !important; 
+                        background: linear-gradient(45deg, #667eea, #764ba2) !important; 
+                        border-radius: 20px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;}
+    .step-box {background: #f8f9ff; padding: 1.5rem; border-radius: 15px; border-left: 6px solid #4facfe; margin: 1rem 0;}
+    .stChatMessage {border-radius: 18px; padding: 1rem;}
+    [data-testid="stChatMessageUser"] {background: #e3f2fd;}
+    [data-testid="stChatMessageAssistant"] {background: #f3e5f5;}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------- HEADER -------------------
-st.markdown('<h1 class="big-title">PACS Support Bot v9</h1>', unsafe_allow_html=True)
-st.markdown("<h3 style='text-align:center; color:#555;'>Instant fixes • Network diagnostics • Universal checklist</h3>", unsafe_allow_html=True)
+# =================== HEADER ===================
+st.markdown('<h1 class="big-title">PACS Helper Bot</h1>', unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center; color:#555;'>Your friendly 24/7 PACS assistant<br>English • عربي • Français</h3>", unsafe_allow_html=True)
+st.markdown("###### 😊 Just tell me what’s wrong – I’ll fix it step by step")
 
-# ------------------- QUICK ACTION BUTTONS -------------------
-col1, col2, col3 = st.columns(3)
+# =================== QUICK FIXES DATABASE ===================
+QUICK_FIXES = {
+    "login|password|locked|تسجيل|mot de passe": "Login problem",
+    "image|slow|blank|not load|صور|lent": "Images not loading",
+    "study|missing|not found|دراسة|examen": "Study not showing",
+    "dicom|send|modality|إرسال": "Modality not sending",
+    "connect|timeout|network|server|offline": "Connection problem",
+    "cache|clear": "Clear cache (fixes 97 %)",
+}
+
+# =================== STEP-BY-STEP GUIDED CHECKLIST ===================
+def guided_checklist():
+    st.markdown("### Let's fix this together – step by step")
+    
+    progress = st.progress(0)
+    step = st.session_state.get("check_step", 0)
+    
+    steps = [
+        ("What's the main problem?", [
+            "Can't login",
+            "Images are slow or blank",
+            "Study is missing",
+            "Modality not sending images",
+            "Can't connect to PACS / timeout",
+            "Everything is freezing",
+            "Other problem"
+        ]),
+        ("Can other doctors open PACS right now?", ["Yes", "No, everyone has the same problem", "Not sure"]),
+        ("Have you tried clearing cache yet?", ["Yes", "No – show me how", "I did but no change"]),
+    ]
+    
+    if step < len(steps):
+        progress.progress((step + 1) / len(steps))
+        q, options = steps[step]
+        st.markdown(f"**Step {step+1}/{len(steps)}: {q}**")
+        choice = st.radio("", options, key=f"step{step}")
+        
+        if st.button("Next →", type="primary", use_container_width=True):
+            st.session_state[f"ans{step}"] = choice
+            st.session_state.check_step = step + 1
+            st.rerun()
+    else:
+        progress.progress(1.0)
+        st.success("Diagnosis complete!")
+        
+        # Simple logic based on answers
+        a1 = st.session_state.get("ans0", "")
+        a2 = st.session_state.get("ans1", "")
+        a3 = st.session_state.get("ans2", "")
+        
+        if "everyone" in a2.lower():
+            st.error("PACS is down for everyone → Use backup viewer → Call emergency line")
+        elif "login" in a1.lower():
+            st.info("→ Try incognito → Clear cache → Reset password → Call PACS admin if locked")
+        elif "image" in a1.lower():
+            st.info("→ Press F5 → Close other studies → Tools → Clear Cache → Use wired internet")
+        elif "study" in a1.lower():
+            st.info("→ Double-check Patient ID & Accession → Widen date range → Ask admin to prefetch")
+        elif "connect" in a1.lower():
+            st.info("→ See the NETWORK CHECK button below – run those tests")
+        else:
+            st.info("Try the UNIVERSAL FIX first → 97 % of problems disappear!")
+        
+        if st.button("Start over"):
+            st.session_state.check_step = 0
+            st.rerun()
+
+# =================== NETWORK CHECK (IP UNKNOWN) ===================
+def network_check():
+    st.markdown("### Network & Server Connection Test")
+    st.info("Replace `YOUR_PACS_IP_HERE` with your real PACS server IP (ask IT if you don’t know)")
+    
+    commands = """
+ping YOUR_PACS_IP_HERE
+tracert YOUR_PACS_IP_HERE
+telnet YOUR_PACS_IP_HERE 104
+telnet YOUR_PACS_IP_HERE 443
+Test-NetConnection YOUR_PACS_IP_HERE -Port 104
+"""
+    st.code(commands.strip(), language="bash")
+    
+    if st.button("Copy commands (ready to paste)"):
+        st.code(commands.strip())
+
+# =================== MAIN BUTTONS ===================
+col1, col2 = st.columns(2)
 with col1:
-    if st.button("UNIVERSAL FIX\n(97 % success)", type="primary", use_container_width=True):
-        st.success("Close all → Clear Cache → Log out/in → Restart PC")
+    if st.button("UNIVERSAL FIX\n(Works 97 % of time)", type="primary", use_container_width=True):
+        st.success("Close everything → Clear Cache → Restart computer\nThat’s it – seriously!")
 with col2:
-    if st.button("NETWORK\nCHECKLIST", type="primary", use_container_width=True):
-        st.session_state.show_network = True
-with col3:
-    if st.button("CLEAR CACHE\nSTEPS", type="primary", use_container_width=True):
-        render_fix("Clear Cache", FIXES_DB["cache"])
+    if st.button("STEP-BY-STEP\nGUIDED HELP", type="primary", use_container_width=True):
+        st.session_state.check_step = 0
 
-# Show network checklist if requested
-if st.session_state.get("show_network"):
-    render_network_checklist()
+col3, col4 = st.columns(2)
+with col3:
+    if st.button("CLEAR CACHE\nHow-to", type="primary", use_container_width=True):
+        st.info("Tools → Clear Local Cache\nor press Ctrl+Shift+Delete → Clear cached images")
+with col4:
+    if st.button("NETWORK & PORT\nCHECK", type="primary", use_container_width=True):
+        network_check()
+
+st.markdown("---")
+
+# =================== SHOW GUIDED CHECKLIST IF ACTIVE ===================
+if st.session_state.get("check_step", 0) > 0:
+    guided_checklist()
     st.markdown("---")
 
-# ------------------- CHAT INTERFACE -------------------
+# =================== CHAT (friendly fallback) ===================
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hey doc! What PACS issue today? I’ve got your back Lungs"}]
+    st.session_state.messages = [{"role":"assistant", "content":"Hey doctor! What’s not working today? I’m here to help Lungs"}]
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"], unsafe_allow_html=True)
+        st.markdown(msg["content"])
 
-if prompt := st.chat_input("Describe your problem (e.g. “images slow”, “can’t connect”, “study missing”)"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+if prompt := st.chat_input("Or just type here… (e.g. “images slow”, “مرحبا”, “je n’arrive pas à me connecter”)"):
+    st.session_state.messages.append({"role":"user", "content":prompt})
+    with st.chat_message("user"): st.markdown(prompt)
+    
+    found = False
+    for triggers, name in QUICK_FIXES.items():
+        if any(t in prompt.lower() for t in triggers.split("|")):
+            st.success(f"→ {name} problem detected!")
+            if "connect" in triggers:
+                network_check()
+            found = True
+    
+    if not found:
+        st.info("I didn’t catch that exactly…\nBut don’t worry – just use one of the big buttons above Lungs")
 
-    found, title, steps = match_fix(prompt)
-    if found:
-        reply = f"**{title} Fix:**"
-        render_fix(title, steps)
-    else:
-        reply = "Not sure exactly… but 97 % of issues are fixed with the **UNIVERSAL FIX** or **NETWORK CHECKLIST** buttons above!"
-
-    # Auto-show network checklist on connectivity keywords
-    if any(k in prompt.lower() for k in ["connect", "network", "timeout", "server", "ping", "port"]):
-        st.session_state.show_network = True
-        reply += "\n\nOpening network checklist for you…"
-
-    st.session_state.messages.append({"role": "assistant", "content": reply})
-    with st.chat_message("assistant"):
-        st.markdown(reply, unsafe_allow_html=True)
-
-# ------------------- FOOTER -------------------
+# =================== FOOTER ===================
 st.markdown("---")
-st.caption(f"Made with love for radiologists • Emergency: {EMERGENCY_NUMBER} • v9 modular edition")
+st.caption("Made with Lungs for radiologists who deserve better • Free forever • Share with your friends!")
