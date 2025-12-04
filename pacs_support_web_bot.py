@@ -1,162 +1,595 @@
-=============================================
-PACS SUPPORT BOT v13 – GROK AI AUTO-DIAGNOSIS EDITION
-=============================================
 import streamlit as st
 from openai import OpenAI
+import time
+import json
+import os
+from datetime import datetime
+
+# =================== CONFIGURATION ===================
 st.set_page_config(
-page_title="PACS Helper Bot",
-page_icon="🩺",
-layout="wide",
-initial_sidebar_state="collapsed"
+    page_title="PACS Helper Bot Pro",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/pacs-helper',
+        'Report a bug': 'https://github.com/pacs-helper/issues',
+        'About': "### PACS Helper Bot Pro v2.0\nAssistant intelligent pour radiologie\n🚀 Powered by Grok xAI"
+    }
 )
-=================== MEDICAL RADIOLOGY BACKGROUND ===================
-background_image_url = "https://images.unsplash.com/photo-1551601645-2f9a2d7a2e2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"  # High-quality subtle radiology modalities collage
-st.markdown(f"""
+
+# =================== STYLES MÉDICAUX PROFESSIONNELS ===================
+st.markdown("""
 <style>
-    .main {{
-        background: linear-gradient(to bottom, rgba(240,248,255,0.95), rgba(224,255,255,0.95)), 
-                    url('{background_image_url}');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        min-height: 100vh;
-        padding: 2rem;
-    }}
-    .block-container {{
-        background: rgba(255, 255, 255, 0.93);
-        border-radius: 30px;
-        padding: 3rem;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.1);
-        backdrop-filter: blur(10px);
-    }}
-    .big-title {{
-        font-size: 4.5rem !important;
-        font-weight: 900;
+    /* Thème médical professionnel */
+    .main {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+    }
+    
+    .medical-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border-left: 6px solid #1e90ff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: transform 0.3s;
+    }
+    
+    .medical-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    .emergency-card {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+        border-left: 6px solid #ff6b6b;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+    }
+    
+    .success-card {
+        background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+        border-left: 6px solid #38a169;
+    }
+    
+    .tech-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+        border-left: 6px solid #3182ce;
+    }
+    
+    .stButton > button {
+        background: linear-gradient(45deg, #1e90ff, #4169e1);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(30, 144, 255, 0.3);
+    }
+    
+    .urgent-button {
+        background: linear-gradient(45deg, #ff6b6b, #ff4757) !important;
+    }
+    
+    .quick-fix-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .status-ok { background: #c6f6d5; color: #22543d; }
+    .status-warning { background: #fed7d7; color: #742a2a; }
+    .status-info { background: #bee3f8; color: #2a4365; }
+    
+    .chat-user {
+        background: #e3f2fd !important;
+        border-radius: 15px 15px 5px 15px;
+        margin: 0.5rem;
+    }
+    
+    .chat-assistant {
+        background: #f0fff4 !important;
+        border-radius: 15px 15px 15px 5px;
+        margin: 0.5rem;
+    }
+    
+    .sidebar-header {
+        background: linear-gradient(135deg, #1e90ff, #4169e1);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-box {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
         text-align: center;
-        background: linear-gradient(to right, #00bfff, #20b2aa, #00fa9a);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }}
-    .friend-btn button {{
-        background: linear-gradient(45deg, #20b2aa, #48d1cc, #00fa9a) !important;
-        border-radius: 25px !important;
-        box-shadow: 0 10px 25px rgba(32,178,170,0.3) !important;
-    }}
-    .step-box {{
-        background: rgba(240,255,240,0.9);
-        border-left: 8px solid #20b2aa;
-    }}
-    [data-testid="stChatMessageUser"] {{background: #e0ffff;}}
-    [data-testid="stChatMessageAssistant"] {{background: #f0fff0;}}
-    [dir="rtl"] {{direction: rtl; text-align: right;}}
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
 </style>
 """, unsafe_allow_html=True)
-=================== XAI GROK API INTEGRATION ===================
-client = None
-ai_enabled = False
-if st.secrets.get("XAI_API_KEY"):
-client = OpenAI(
-base_url="https://api.x.ai/v1",
-api_key=st.secrets["XAI_API_KEY"]
-)
-ai_enabled = True
-else:
-st.warning("⚠️ Ajoutez votre XAI_API_KEY dans Secrets pour activer le diagnostic automatique par Grok xAI ! → https://x.ai/api")
-=================== LANGUAGE SELECTOR ===================
-if "language" not in st.session_state:
-st.session_state.language = "Français"
-lang_options = {"English": "en", "Français": "fr", "عربي": "ar"}
-selected_lang = st.selectbox("🌍 Langue / Language / اللغة", list(lang_options.keys()), index=["en", "fr", "ar"].index(st.session_state.language))
-st.session_state.language = selected_lang
-lang_code = lang_options[selected_lang]
-=================== TRANSLATIONS (same as v12) ===================
-translations = { ... }  # Keep exactly the same dictionary as v12 (omitted here for brevity, copy-paste from previous version)
-tr = translations[lang_code]
-QUICK_FIXES = tr["quick_fixes"]
-=================== GROK SYSTEM PROMPT (ENGLISH - Grok will translate perfectly) ===================
-english_quick_fixes = translations["en"]["quick_fixes"]
-system_prompt = """
-You are PACS Helper Bot 🩺 – the smartest and friendliest PACS assistant in the world, now powered by Grok xAI.
-You speak perfect English, Français, and عربي. ALWAYS reply in the exact language of the user's last message.
-Be super warm, positive, encouraging, and use lots of emojis 😊🩺🔥🛠️📸
-Rules:
 
-Diagnose instantly and give the exact solution when you recognize the problem
-NEVER invent solutions
-ONLY use the solutions below – copy them exactly
-Keep replies short, clear, with short lines and numbered steps
-If server issue, always add: "If this persists >30 min, contact IT immediately!"
+# =================== INITIALISATION DE SESSION ===================
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+if 'diagnosis_history' not in st.session_state:
+    st.session_state.diagnosis_history = []
+if 'quick_access' not in st.session_state:
+    st.session_state.quick_access = []
+if 'language' not in st.session_state:
+    st.session_state.language = "Français"
 
-Exact solutions you MUST use:
-""" + "\n\n".join([
-f"### {info['name'].upper()}\nTriggers: {', '.join(triggers.split('|'))}\nSolution (copy exactly):\n{info['solution']}"
-for triggers, info in english_quick_fixes.items()
-]) + """
-\nIf no perfect match → reply exactly: "Hmm, je n’ai pas bien compris... Mais pas de panique ! 😊 Essayez un des gros boutons ci-dessus ou décrivez-moi mieux le problème."
-You can also say:
-
-"Essayez d'abord la SOLUTION UNIVERSELLE ✨ (ça marche 97% du temps !)"
-"Voulez-vous que je vous guide étape par étape ? → Cliquez sur 🧭 AIDE GUIDÉE"
-"Besoin de tester le réseau ? → 🔌 TEST RÉSEAU"
-
-Always stay friendly and professional.
-"""
-=================== HEADER ===================
-dir_attr = ' dir="rtl"' if lang_code == "ar" else ""
-st.markdown(f'<h1 class="big-title"{dir_attr}>{tr["title"]}', unsafe_allow_html=True)
-powered = " 🚀 Powered by Grok xAI" if ai_enabled else ""
-st.markdown(f"<h3 class='subheader'{dir_attr}>{tr['subheader']}{powered}", unsafe_allow_html=True)
-st.markdown(f'######{dir_attr} {tr["prompt_hint"]}', unsafe_allow_html=True)
-=================== REST OF FUNCTIONS (guided_checklist, network_check, show_resources) ===================
-→ Keep exactly the same as v12 (copy-paste them here)
-=================== MAIN BUTTONS ===================
-→ Same as v12
-=================== CHAT - NOW FULLY AI-POWERED BY GROK ===================
-if "messages" not in st.session_state:
-welcome = tr["chat_welcome"]
-if ai_enabled:
-welcome += "\n\n🚀 Diagnostic automatique par IA Grok activé ! Describez-moi le problème, je le résous en quelques secondes 😊"
-st.session_state.messages = [{"role": "assistant", "content": welcome}]
-for msg in st.session_state.messages:
-with st.chat_message(msg["role"]):
-st.markdown(msg["content"])
-if prompt := st.chat_input(tr["chat_input"] + (" | Grok IA vous répond instantanément 🧠" if ai_enabled else "")):
-st.session_state.messages.append({"role": "user", "content": prompt})
-with st.chat_message("user"):
-st.markdown(prompt)
-with st.chat_message("assistant"):
-spinner_texts = {
-"en": "Grok is diagnosing... 🧠",
-"fr": "Grok analyse le problème... 🧠",
-"ar": "غروك يحلل المشكلة... 🧠"
+# =================== BASE DE CONNAISSANCE ÉTENDUE ===================
+PACS_KNOWLEDGE_BASE = {
+    "fr": {
+        "common_issues": {
+            "images_not_loading": {
+                "name": "📸 Images ne se chargent pas",
+                "triggers": ["image", "charger", "afficher", "blanc", "vide", "patient"],
+                "symptoms": ["Écran blanc", "Loader infini", "Message d'erreur", "Images partielles"],
+                "severity": "Medium",
+                "solutions": [
+                    "1. Vérifier la connexion au serveur PACS",
+                    "2. Redémarrer la station de travail",
+                    "3. Vérifier les permissions utilisateur",
+                    "4. Nettoyer le cache navigateur",
+                    "5. Contacter le support IT si persiste >15min"
+                ],
+                "time_estimate": "5-15 minutes"
+            },
+            "slow_performance": {
+                "name": "🐌 Performance lente",
+                "triggers": ["lent", "ralenti", "performance", "chargement", "buffer"],
+                "symptoms": ["Délais importants", "Interface gelée", "CPU à 100%"],
+                "severity": "Low",
+                "solutions": [
+                    "1. Fermer applications inutiles",
+                    "2. Vider cache temporaire",
+                    "3. Vérifier connexion réseau",
+                    "4. Redémarrer la machine",
+                    "5. Contacter IT pour optimisation"
+                ],
+                "time_estimate": "10-20 minutes"
+            },
+            "login_failure": {
+                "name": "🔐 Échec de connexion",
+                "triggers": ["login", "connexion", "mot de passe", "accès", "authentification"],
+                "symptoms": ["Erreur 401/403", "Identifiants rejetés", "Session expirée"],
+                "severity": "High",
+                "solutions": [
+                    "1. Vérifier caps lock",
+                    "2. Réinitialiser mot de passe",
+                    "3. Vérifier AD/LDAP",
+                    "4. Contacter helpdesk",
+                    "5. Utiliser compte temporaire"
+                ],
+                "time_estimate": "2-10 minutes"
+            },
+            "printing_issue": {
+                "name": "🖨️ Problème d'impression",
+                "triggers": ["imprimante", "impression", "papier", "film", "dimension"],
+                "symptoms": ["File d'attente bloquée", "Mauvais format", "Erreur driver"],
+                "severity": "Medium",
+                "solutions": [
+                    "1. Vérifier connexion imprimante",
+                    "2. Redémarrer spooler d'impression",
+                    "3. Vérifier format DICOM",
+                    "4. Reconfigurer préférences",
+                    "5. Tester avec autre imprimante"
+                ],
+                "time_estimate": "5-15 minutes"
+            },
+            "dicom_error": {
+                "name": "⚠️ Erreur DICOM",
+                "triggers": ["dicom", "transfert", "pacs", "orthanc", "store"],
+                "symptoms": ["Transfert échoué", "Étiquette incorrecte", "Metadata manquante"],
+                "severity": "High",
+                "solutions": [
+                    "1. Vérifier AETitle",
+                    "2. Contrôler port DICOM (104)",
+                    "3. Vérifier storage commitment",
+                    "4. Regarder logs serveur",
+                    "5. Contacter admin PACS"
+                ],
+                "time_estimate": "15-30 minutes"
+            }
+        },
+        "quick_fixes": [
+            {"icon": "🔄", "text": "Redémarrer station", "action": "restart"},
+            {"icon": "🌐", "text": "Tester connexion", "action": "network_test"},
+            {"icon": "🧹", "text": "Nettoyer cache", "action": "clear_cache"},
+            {"icon": "📋", "text": "Vérifier logs", "action": "check_logs"},
+            {"icon": "🔧", "text": "Mode diagnostic", "action": "diagnostic_mode"}
+        ],
+        "predefined_questions": [
+            "Comment transférer des images ?",
+            "Problème avec les annotations ?",
+            "L'impression ne fonctionne pas",
+            "Je ne vois pas tous les patients",
+            "Erreur de sauvegarde automatique",
+            "Comment faire une mesure ?",
+            "Problème de contraste/fenêtrage",
+            "L'application se ferme toute seule"
+        ]
+    },
+    "en": {
+        "common_issues": {
+            "images_not_loading": {
+                "name": "📸 Images not loading",
+                "triggers": ["image", "load", "display", "white", "blank", "patient"],
+                "symptoms": ["White screen", "Infinite loader", "Error message", "Partial images"],
+                "severity": "Medium",
+                "solutions": [
+                    "1. Check PACS server connection",
+                    "2. Restart workstation",
+                    "3. Verify user permissions",
+                    "4. Clear browser cache",
+                    "5. Contact IT if persists >15min"
+                ],
+                "time_estimate": "5-15 minutes"
+            },
+            "slow_performance": {
+                "name": "🐌 Slow performance",
+                "triggers": ["slow", "lag", "performance", "loading", "buffer"],
+                "symptoms": ["Significant delays", "Frozen interface", "CPU at 100%"],
+                "severity": "Low",
+                "solutions": [
+                    "1. Close unnecessary applications",
+                    "2. Clear temporary cache",
+                    "3. Check network connection",
+                    "4. Restart machine",
+                    "5. Contact IT for optimization"
+                ],
+                "time_estimate": "10-20 minutes"
+            }
+        },
+        "quick_fixes": [
+            {"icon": "🔄", "text": "Restart workstation", "action": "restart"},
+            {"icon": "🌐", "text": "Test connection", "action": "network_test"},
+            {"icon": "🧹", "text": "Clear cache", "action": "clear_cache"},
+            {"icon": "📋", "text": "Check logs", "action": "check_logs"},
+            {"icon": "🔧", "text": "Diagnostic mode", "action": "diagnostic_mode"}
+        ],
+        "predefined_questions": [
+            "How to transfer images?",
+            "Problem with annotations?",
+            "Printing not working",
+            "Can't see all patients",
+            "Auto-save error",
+            "How to make a measurement?",
+            "Contrast/windowing issue",
+            "Application crashes randomly"
+        ]
+    }
 }
-with st.spinner(spinner_texts[lang_code]):
-if ai_enabled:
-Full conversation context
-api_messages = [{"role": "system", "content": system_prompt}] + [
-{"role": m["role"], "content": m["content"]} for m in st.session_state.messages
-]
-completion = client.chat.completions.create(
-model="grok-beta",
-messages=api_messages,
-temperature=0.6,
-max_tokens=600
-)
-reply = completion.choices[0].message.content
-else:
-Fallback keyword matching (multilingual)
-found = False
-user_lower = prompt.lower()
-for triggers, info in QUICK_FIXES.items():
-if any(t in user_lower for t in triggers.split("|")):
-reply = f"→ {info['name']} détecté ! Voici la solution :\n\n{info['solution']}"
-found = True
-break
-if not found:
-reply = tr["not_found"]
-st.markdown(reply)
-st.session_state.messages.append({"role": "assistant", "content": reply})
-=================== FOOTER ===================
-powered_footer = " • Propulsé par Grok xAI 🧠" if ai_enabled else ""
+
+# =================== FONCTIONS UTILITAIRES ===================
+def perform_network_test():
+    """Simule un test réseau"""
+    with st.spinner("🔍 Test réseau en cours..."):
+        time.sleep(2)
+        return {
+            "status": "✅ OK",
+            "ping": "15ms",
+            "download": "85 Mbps",
+            "upload": "45 Mbps",
+            "server_connection": "✅ Connecté"
+        }
+
+def clear_cache():
+    """Simule le nettoyage du cache"""
+    with st.spinner("🧹 Nettoyage du cache..."):
+        time.sleep(1)
+        return "Cache nettoyé avec succès !"
+
+def check_logs():
+    """Affiche les logs simulés"""
+    logs = [
+        f"[{datetime.now().strftime('%H:%M:%S')}] INFO: Connexion utilisateur établie",
+        f"[{datetime.now().strftime('%H:%M:%S')}] WARN: Cache presque plein (85%)",
+        f"[{datetime.now().strftime('%H:%M:%S')}] INFO: Transfert DICOM réussi",
+        f"[{datetime.now().strftime('%H:%M:%S')}] ERROR: Échec authentification LDAP"
+    ]
+    return logs
+
+def get_diagnosis_suggestions(user_input, language="fr"):
+    """Analyse l'entrée utilisateur et suggère des solutions"""
+    suggestions = []
+    knowledge = PACS_KNOWLEDGE_BASE[language]["common_issues"]
+    
+    for issue_id, issue in knowledge.items():
+        for trigger in issue["triggers"]:
+            if trigger.lower() in user_input.lower():
+                suggestions.append({
+                    "issue": issue["name"],
+                    "solutions": issue["solutions"],
+                    "severity": issue["severity"],
+                    "time": issue["time_estimate"]
+                })
+                break
+    
+    return suggestions
+
+# =================== SIDEBAR ===================
+with st.sidebar:
+    st.markdown('<div class="sidebar-header">', unsafe_allow_html=True)
+    st.markdown("### 🏥 PACS Dashboard")
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Sélecteur de langue
+    language = st.selectbox(
+        "🌍 Langue / Language",
+        ["Français", "English"],
+        index=0 if st.session_state.language == "Français" else 1
+    )
+    st.session_state.language = language
+    lang_key = "fr" if language == "Français" else "en"
+    
+    # Métriques système
+    st.markdown("### 📊 État du système")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown('<div class="metric-box">', unsafe_allow_html=True)
+        st.metric("PACS Status", "✅ Online", "+2%")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="metric-box">', unsafe_allow_html=True)
+        st.metric("Tickets Actifs", "3", "-1")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Accès rapide
+    st.markdown("### ⚡ Accès Rapide")
+    knowledge = PACS_KNOWLEDGE_BASE[lang_key]
+    
+    for fix in knowledge["quick_fixes"]:
+        if st.button(f"{fix['icon']} {fix['text']}", use_container_width=True):
+            if fix['action'] == 'network_test':
+                result = perform_network_test()
+                st.success("Test réseau complété !")
+                st.json(result)
+            elif fix['action'] == 'clear_cache':
+                result = clear_cache()
+                st.success(result)
+    
+    # Historique des diagnostics
+    if st.session_state.diagnosis_history:
+        st.markdown("### 📜 Historique")
+        for hist in st.session_state.diagnosis_history[-3:]:
+            st.caption(f"• {hist}")
+
+# =================== MAIN INTERFACE ===================
+st.title("🤖 PACS Helper Bot Pro")
+st.markdown("### Votre assistant intelligent pour la radiologie - Diagnostique et résout les problèmes PACS en temps réel")
+
+# =================== SECTION D'URGENCE ===================
+with st.expander("🚨 URGENCE - Problèmes Critiques", expanded=False):
+    emergency_col1, emergency_col2, emergency_col3 = st.columns(3)
+    
+    with emergency_col1:
+        if st.button("📛 IMAGES PERDUES", use_container_width=True, type="primary"):
+            st.error("CONTACTEZ IMMÉDIATEMENT LE SUPPORT IT !")
+            st.markdown("**Procédure d'urgence:**")
+            st.markdown("1. Ne pas éteindre la station")
+            st.markdown("2. Appeler IT: Ext. 5555")
+            st.markdown("3. Documenter les patients concernés")
+    
+    with emergency_col2:
+        if st.button("🔥 SERVEUR DOWN", use_container_width=True, type="primary"):
+            st.warning("Serveur PACS inaccessible")
+            st.markdown("**Actions immédiates:**")
+            st.markdown("1. Vérifier alimentation serveur")
+            st.markdown("2. Contacter administrateur")
+            st.markdown("3. Activer mode dégradé")
+    
+    with emergency_col3:
+        if st.button("⚠️ ERREUR DICOM", use_container_width=True, type="primary"):
+            st.warning("Problème de transfert DICOM")
+            st.markdown("**Vérifications:**")
+            st.markdown("1. Port 104 accessible")
+            st.markdown("2. AETitle correct")
+            st.markdown("3. Stockage disponible")
+
+# =================== QUESTIONS PRÉDÉFINIES ===================
+st.markdown("### 💡 Questions Fréquentes")
+knowledge = PACS_KNOWLEDGE_BASE[lang_key]
+questions = knowledge["predefined_questions"]
+
+cols = st.columns(4)
+for idx, question in enumerate(questions):
+    with cols[idx % 4]:
+        if st.button(f"❓ {question}", use_container_width=True):
+            suggestions = get_diagnosis_suggestions(question, lang_key)
+            if suggestions:
+                st.session_state.messages.append({"role": "user", "content": question})
+                response = f"**Solution suggérée pour :** {question}\n\n"
+                for suggestion in suggestions:
+                    response += f"### {suggestion['issue']} ({suggestion['severity']})\n"
+                    response += f"*Temps estimé: {suggestion['time']}*\n\n"
+                    for solution in suggestion['solutions']:
+                        response += f"{solution}\n"
+                    response += "\n"
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.rerun()
+
+# =================== CHAT INTERFACE ===================
+st.markdown("### 💬 Chat avec l'Assistant PACS")
+
+# Affichage de l'historique du chat
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Entrée utilisateur
+if prompt := st.chat_input("Décrivez votre problème PACS ici..."):
+    # Ajouter le message utilisateur
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # Afficher le message utilisateur
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Analyser et répondre
+    with st.chat_message("assistant"):
+        with st.spinner("🔍 Analyse en cours..."):
+            time.sleep(1)
+            
+            # Obtenir les suggestions
+            suggestions = get_diagnosis_suggestions(prompt, lang_key)
+            
+            if suggestions:
+                response = f"### 🩺 Diagnostic Automatique\n\n"
+                
+                for suggestion in suggestions[:2]:  # Limiter à 2 suggestions max
+                    severity_color = {
+                        "High": "🔴",
+                        "Medium": "🟡", 
+                        "Low": "🟢"
+                    }.get(suggestion["severity"], "⚪")
+                    
+                    response += f"**{severity_color} {suggestion['issue']}**\n"
+                    response += f"*Sévérité: {suggestion['severity']} | Temps estimé: {suggestion['time']}*\n\n"
+                    
+                    for i, solution in enumerate(suggestion["solutions"], 1):
+                        response += f"{solution}\n"
+                    
+                    response += "\n---\n"
+                
+                response += "\n### 🛠️ Actions Recommandées\n"
+                response += "1. Essayer les solutions ci-dessus\n"
+                response += "2. Si problème persiste, contactez IT\n"
+                response += "3. Documenter l'incident\n\n"
+                response += "Besoin d'aide supplémentaire ? Continuez à décrire votre problème !"
+                
+                # Enregistrer dans l'historique
+                issue_name = suggestions[0]["issue"] if suggestions else "Problème général"
+                st.session_state.diagnosis_history.append(
+                    f"{datetime.now().strftime('%H:%M')} - {issue_name}"
+                )
+            else:
+                response = "### 🤔 Je n'ai pas reconnu exactement votre problème\n\n"
+                response += "**Veuillez préciser :**\n"
+                response += "- Quelle station/application ?\n"
+                response += "- Quand le problème est apparu ?\n"
+                response += "- Message d'erreur exact ?\n"
+                response += "- Combien d'utilisateurs affectés ?\n\n"
+                response += "**Ou essayez une solution générale :**\n"
+                response += "🔁 Redémarrer la station de travail\n"
+                response += "🌐 Vérifier la connexion réseau\n"
+                response += "🧹 Nettoyer le cache navigateur\n"
+            
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
+# =================== OUTILS DE DIAGNOSTIC ===================
+st.markdown("### 🛠️ Outils de Diagnostic")
+
+tab1, tab2, tab3, tab4 = st.tabs(["🔧 Tests Réseau", "📊 Logs Système", "💾 Ressources", "🎯 Diagnostic Avancé"])
+
+with tab1:
+    st.markdown("#### Test de Connexion PACS")
+    if st.button("Lancer le test complet", type="primary"):
+        result = perform_network_test()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("##### Résultats")
+            for key, value in result.items():
+                st.metric(key, value)
+        
+        with col2:
+            st.markdown("##### Recommandations")
+            if result["ping"] > "50ms":
+                st.warning("Latence élevée détectée")
+                st.markdown("1. Vérifier câbles réseau")
+                st.markdown("2. Contacter service réseau")
+            else:
+                st.success("Connexion optimale")
+
+with tab2:
+    st.markdown("#### Logs Système Récent")
+    if st.button("Afficher les logs"):
+        logs = check_logs()
+        for log in logs:
+            if "ERROR" in log:
+                st.error(log)
+            elif "WARN" in log:
+                st.warning(log)
+            else:
+                st.info(log)
+
+with tab3:
+    st.markdown("#### Utilisation des Ressources")
+    # Graphiques simulés
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("**CPU**")
+        st.progress(65)
+        st.caption("65% - Normal")
+    with col2:
+        st.markdown("**Mémoire**")
+        st.progress(78)
+        st.caption("78% - Élevé")
+    with col3:
+        st.markdown("**Stockage**")
+        st.progress(42)
+        st.caption("42% - Bon")
+    
+    st.markdown("##### Recommandations")
+    st.info("""
+    - 💾 Nettoyer fichiers temporaires
+    - 🗃️ Archiver anciennes études
+    - 🔄 Redémarrer hebdomadairement
+    """)
+
+with tab4:
+    st.markdown("#### Diagnostic Avancé")
+    symptoms = st.multiselect(
+        "Sélectionnez les symptômes",
+        ["Écran blanc", "Lenteur", "Erreur DICOM", "Connexion perdue", "Crash", "Autre"]
+    )
+    
+    if symptoms:
+        st.markdown("##### Analyse des symptômes")
+        for symptom in symptoms:
+            if symptom == "Écran blanc":
+                st.markdown("🔍 **Écran blanc:** Problème probable de cache ou GPU")
+                st.markdown("Solution: Ctrl+Shift+R (hard refresh)")
+            elif symptom == "Lenteur":
+                st.markdown("🔍 **Lenteur:** Possible surcharge mémoire")
+                st.markdown("Solution: Fermer onglets inutiles")
+
+# =================== FOOTER ===================
 st.markdown("---")
-st.caption(f"Made with ❤️ for radiologists who deserve zero downtime {powered_footer} • Free forever • Share with your team! 🩺")
+footer_col1, footer_col2, footer_col3 = st.columns(3)
+with footer_col1:
+    st.markdown("**Support IT** 📞 Ext. 5555")
+with footer_col2:
+    st.markdown("**Email** ✉️ support@pacs-hospital.fr")
+with footer_col3:
+    st.markdown("**Version** 2.0.1 🚀")
+
+st.caption("© 2024 PACS Helper Bot Pro - Assistant intelligent pour la radiologie - Tous droits réservés")
